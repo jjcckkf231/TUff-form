@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>แบบสำรวจ KMITL — ลุ้นรับรางวัล</title>
+<meta name="description" content="แบบสำรวจสั้น 8 ข้อ ใช้เวลาประมาณ 2 นาที ตอบเสร็จได้หมุนวงล้อลุ้นรับรหัสเงินสด">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="app">
+
+  <!-- ─────────────────────────────── LANDING ─────────────────────────────── -->
+  <section id="screen-landing" class="screen is-active">
+    <header class="hero">
+      <div class="pill" id="pin-counter">กำลังโหลด…</div>
+      <h1 id="landing-title">แบบสำรวจข้อมูลกลุ่มผู้ใช้พื้นที่รอบมหาวิทยาลัย</h1>
+      <p class="lede" id="landing-purpose"></p>
+    </header>
+
+    <ul class="facts">
+      <li><span class="fact-num">8</span><span class="fact-label">คำถาม</span></li>
+      <li><span class="fact-num">~2</span><span class="fact-label">นาที</span></li>
+      <li><span class="fact-num">1%</span><span class="fact-label">โอกาสรับรางวัล</span></li>
+    </ul>
+
+    <div class="rules">
+      <h2>กติกา</h2>
+      <ul>
+        <li>รางวัลทั้งหมด <b>6 รหัส</b> โอกาสได้รับประมาณ <b>1%</b> ต่อคน</li>
+        <li>ตอบได้ <b>1 ครั้ง</b> ต่อ 1 บัญชี และหมุนวงล้อได้ <b>1 ครั้ง</b></li>
+        <li>ต้องเข้าสู่ระบบด้วยบัญชี <b>@kmitl.ac.th</b> เพื่อยืนยันสิทธิ์</li>
+        <li>หากปิดแบบสำรวจแล้วยังมีรหัสเหลือ จะนำไป <b>จับฉลาก</b> ให้ผู้ที่ตอบแล้วไม่ได้รางวัล</li>
+      </ul>
+    </div>
+
+    <label class="consent">
+      <input type="checkbox" id="consent-box">
+      <span>
+        ข้าพเจ้ายินยอมให้เก็บ <b>อีเมล</b> และ <b>คำตอบ</b> เพื่อใช้ในการวิเคราะห์ข้อมูลและติดต่อผู้ได้รับรางวัล
+        ข้อมูลจะถูกเก็บไม่เกิน <b>12 เดือน</b> และรายงานผลในรูปแบบสรุปภาพรวมเท่านั้น
+        สามารถขอลบข้อมูลได้ทุกเมื่อ (PDPA)
+      </span>
+    </label>
+
+    <div id="signin-slot" class="signin-slot" aria-live="polite"></div>
+    <p class="hint" id="signin-hint">กรุณายอมรับเงื่อนไขก่อนเข้าสู่ระบบ</p>
+    <p class="error" id="landing-error" hidden></p>
+  </section>
+
+  <!-- ─────────────────────────────── SURVEY ──────────────────────────────── -->
+  <section id="screen-survey" class="screen">
+    <div class="survey-bar">
+      <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="survey-meta">
+        <span id="progress-label">0 / 8</span>
+        <span id="timer" class="timer">0:00</span>
+      </div>
+    </div>
+
+    <form id="survey-form" novalidate>
+      <div id="questions"></div>
+      <button type="submit" class="btn btn-primary btn-lg" id="submit-btn" disabled>ส่งคำตอบ แล้วไปหมุนวงล้อ</button>
+      <p class="error" id="survey-error" hidden></p>
+    </form>
+  </section>
+
+  <!-- ──────────────────────────────── SPIN ───────────────────────────────── -->
+  <section id="screen-spin" class="screen">
+    <h2 class="spin-title">ขอบคุณ! ถึงเวลาหมุนวงล้อ</h2>
+    <p class="lede center">หมุนได้ครั้งเดียวเท่านั้น</p>
+
+    <div class="wheel-wrap">
+      <div class="wheel-pointer" aria-hidden="true"></div>
+      <canvas id="wheel" width="600" height="600" role="img" aria-label="วงล้อรางวัล"></canvas>
+      <div class="wheel-hub" aria-hidden="true"></div>
+    </div>
+
+    <button class="btn btn-primary btn-lg" id="spin-btn">หมุน!</button>
+    <p class="error" id="spin-error" hidden></p>
+  </section>
+
+  <!-- ─────────────────────────────── RESULT ──────────────────────────────── -->
+  <section id="screen-result" class="screen">
+    <div id="result-win" hidden>
+      <div class="burst">🎉</div>
+      <h2>คุณได้รับรางวัล!</h2>
+      <p class="lede center">บันทึกหน้าจอนี้ไว้ทันที — เราส่งสำเนาไปที่อีเมลของคุณแล้วเช่นกัน</p>
+      <div class="code-box">
+        <code id="prize-code"></code>
+        <button class="btn btn-ghost" id="copy-btn">คัดลอกรหัส</button>
+      </div>
+    </div>
+
+    <div id="result-lose" hidden>
+      <div class="burst">🙏</div>
+      <h2>ขอบคุณที่ร่วมตอบแบบสำรวจ</h2>
+      <p class="lede center">ครั้งนี้ยังไม่ได้รางวัล แต่คำตอบของคุณมีค่ามาก</p>
+      <p class="lede center" id="lose-remaining"></p>
+      <button class="btn btn-ghost" id="share-btn">ชวนเพื่อนมาตอบ</button>
+    </div>
+
+    <div id="result-done" hidden>
+      <div class="burst">✅</div>
+      <h2>คุณตอบแบบสำรวจนี้ไปแล้ว</h2>
+      <p class="lede center" id="done-detail"></p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <p>ข้อมูลของคุณถูกใช้เพื่อการศึกษาเท่านั้น · ติดต่อขอลบข้อมูลได้ที่อีเมลผู้จัดทำ</p>
+</footer>
+
+<div id="overlay" class="overlay" hidden><div class="spinner" aria-label="กำลังทำงาน"></div></div>
+
+<script src="config.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="app.js"></script>
+</body>
+</html>
