@@ -1,6 +1,7 @@
 /**
  * KMITL Survey + Spinner Reward — Apps Script backend
- * Bind this script to the spreadsheet (Extensions → Apps Script).
+ * Standalone script — set SHEET_ID below to the target spreadsheet's ID
+ * (from its URL: https://docs.google.com/spreadsheets/d/SHEET_ID/edit).
  *
  * One-time setup:
  *   1. Run setupSheet()      — creates the 4 tabs + headers + protects Prizes
@@ -11,6 +12,12 @@
  */
 
 // ---------------------------------------------------------------- constants
+
+var SHEET_ID = '1RmfgFruw9t7cV67LbxDhyvuVepSTU_aH1XPNdFcRlxc';
+
+function ss_() {
+  return SpreadsheetApp.openById(SHEET_ID);
+}
 
 var TAB_RESPONSES = 'Responses';
 var TAB_SPINS     = 'Spins';
@@ -397,7 +404,7 @@ function rateLimit_(key, maxHits, windowSec) {
 // ---------------------------------------------------------------- sheet helpers
 
 function sheet_(name) {
-  var s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  var s = ss_().getSheetByName(name);
   if (!s) throw new Error('Missing tab: ' + name + ' — run setupSheet()');
   return s;
 }
@@ -453,7 +460,7 @@ function mailWinner_(email, code) {
 // ---------------------------------------------------------------- one-time setup
 
 function setupSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = ss_();
 
   ensureTab_(ss, TAB_RESPONSES, RESPONSE_HEADERS);
   ensureTab_(ss, TAB_SPINS, SPIN_HEADERS);
@@ -473,7 +480,7 @@ function setupSheet() {
   protection.removeEditors(protection.getEditors());
   protection.setWarningOnly(false);
 
-  SpreadsheetApp.getUi().alert('Setup complete. Now paste your real pin codes into Prizes and run setupSecrets().');
+  Logger.log('Setup complete. Now paste your real pin codes into Prizes and run setupSecrets().');
 }
 
 function ensureTab_(ss, name, headers) {
