@@ -43,6 +43,16 @@ var CONFIG_DEFAULTS = [
 // student.chula.ac.th added alongside kmitl.ac.th for testing.
 var ALLOWED_HOSTED_DOMAINS = ['kmitl.ac.th', 'student.chula.ac.th'];
 
+// These accounts bypass the hosted-domain check and the one-submission/
+// one-spin-per-account limits entirely, for repeat manual testing. Every
+// submission still writes a real row to Responses/Spins, and a WIN still
+// claims a real prize code — remove before real launch.
+var UNLIMITED_TEST_EMAILS = ['tanapoom.kawa@gmail.com'];
+
+function isTestEmail_(email) {
+  return UNLIMITED_TEST_EMAILS.indexOf(String(email || '').toLowerCase()) !== -1;
+}
+
 var QUESTION_IDS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8'];
 var CHOICE_QUESTION_IDS = QUESTION_IDS; // all 8 are single_choice
 var SESSION_TTL_SEC = 60 * 60;          // survey session valid 1 hour
@@ -121,7 +131,7 @@ function handleStartSurvey_(body) {
     return { ok: false, error: 'RATE_LIMITED' };
   }
 
-  var existing = findRow_(TAB_RESPONSES, 'user_id', claims.sub);
+  var existing = isTestEmail_(claims.email) ? null : findRow_(TAB_RESPONSES, 'user_id', claims.sub);
   if (existing) {
     var spun = findRow_(TAB_SPINS, 'user_id', claims.sub);
     return {
@@ -166,7 +176,7 @@ function handleSubmitSurvey_(body) {
   if (!lock.tryLock(20000)) return { ok: false, error: 'BUSY' };
 
   try {
-    if (findRow_(TAB_RESPONSES, 'user_id', t.payload.sub)) {
+    if (!isTestEmail_(t.payload.email) && findRow_(TAB_RESPONSES, 'user_id', t.payload.sub)) {
       return { ok: false, error: 'ALREADY_SUBMITTED' };
     }
 
@@ -224,7 +234,7 @@ function handleSpin_(body) {
 
   try {
     if (cache.get('burned:' + t.payload.jti)) return { ok: false, error: 'TOKEN_ALREADY_USED' };
-    if (findRow_(TAB_SPINS, 'user_id', t.payload.sub)) return { ok: false, error: 'ALREADY_SPUN' };
+    if (!isTestEmail_(t.payload.email) && findRow_(TAB_SPINS, 'user_id', t.payload.sub)) return { ok: false, error: 'ALREADY_SPUN' };
     if (!findRow_(TAB_RESPONSES, 'user_id', t.payload.sub)) return { ok: false, error: 'NO_RESPONSE' };
 
     var cfg = getConfig_();
@@ -320,7 +330,7 @@ function verifyIdToken_(idToken) {
   }
   if (Number(c.exp) * 1000 < Date.now()) return { ok: false, error: 'TOKEN_EXPIRED' };
   if (String(c.email_verified) !== 'true') return { ok: false, error: 'EMAIL_NOT_VERIFIED' };
-  if (ALLOWED_HOSTED_DOMAINS.indexOf(c.hd) === -1) return { ok: false, error: 'NOT_ALLOWED_DOMAIN' };
+  if (ALLOWED_HOSTED_DOMAINS.indexOf(c.hd) === -1 && !isTestEmail_(c.email)) return { ok: false, error: 'NOT_ALLOWED_DOMAIN' };
   if (!c.sub) return { ok: false, error: 'INVALID_TOKEN' };
 
   return { ok: true, sub: c.sub, email: c.email };
