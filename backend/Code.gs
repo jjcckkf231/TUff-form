@@ -19,18 +19,20 @@ function ss_() {
   return SpreadsheetApp.openById(SHEET_ID);
 }
 
-var TAB_RESPONSES = 'Responses';
-var TAB_SPINS     = 'Spins';
-var TAB_PRIZES    = 'Prizes';
-var TAB_CONFIG    = 'Config';
+var TAB_RESPONSES  = 'Responses';
+var TAB_SPINS      = 'Spins';
+var TAB_PRIZES     = 'Prizes';
+var TAB_CONFIG     = 'Config';
+var TAB_AFFILIATES = 'Affiliates';
 
 var RESPONSE_HEADERS = [
   'response_id', 'user_id', 'email', 'started_at', 'submitted_at', 'duration_sec',
-  'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'ip_hash', 'flags'
+  'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'ip_hash', 'flags', 'affiliate_code'
 ];
-var SPIN_HEADERS   = ['spin_id', 'user_id', 'spun_at', 'p_used', 'roll', 'result', 'prize_id'];
-var PRIZE_HEADERS  = ['prize_id', 'code', 'status', 'claimed_by', 'claimed_at'];
-var CONFIG_HEADERS = ['key', 'value'];
+var SPIN_HEADERS      = ['spin_id', 'user_id', 'spun_at', 'p_used', 'roll', 'result', 'prize_id'];
+var PRIZE_HEADERS     = ['prize_id', 'code', 'status', 'claimed_by', 'claimed_at'];
+var CONFIG_HEADERS    = ['key', 'value'];
+var AFFILIATE_HEADERS = ['affiliate_code', 'name', 'created_at'];
 
 var CONFIG_DEFAULTS = [
   ['target_n', 600],
@@ -147,6 +149,7 @@ function handleStartSurvey_(body) {
     kind: 'session',
     sub: claims.sub,
     email: claims.email,
+    affiliate_code: resolveAffiliate_(body.ref),
     t_start: now.getTime(),
     jti: Utilities.getUuid(),
     exp: now.getTime() + SESSION_TTL_SEC * 1000
@@ -199,6 +202,7 @@ function handleSubmitSurvey_(body) {
     for (var j = 0; j < QUESTION_IDS.length; j++) row.push(String(answers[QUESTION_IDS[j]]));
     row.push('');                 // ip_hash — see SETUP.md, Apps Script cannot see client IP
     row.push(flags.join(','));
+    row.push(t.payload.affiliate_code || '');
 
     sheet_(TAB_RESPONSES).appendRow(row);
   } finally {
@@ -448,6 +452,23 @@ function findRow_(name, column, value) {
   return null;
 }
 
+/**
+ * Looks up a ?ref= code against the admin-managed Affiliates tab. Unknown
+ * or missing codes resolve to '' (direct traffic) rather than an error —
+ * a stale or mistyped referral link should never block a real submission.
+ */
+function resolveAffiliate_(rawCode) {
+  var code = String(rawCode || '').trim();
+  if (!code) return '';
+  var rows = readTab_(TAB_AFFILIATES);
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].affiliate_code).trim().toLowerCase() === code.toLowerCase()) {
+      return String(rows[i].affiliate_code).trim();
+    }
+  }
+  return '';
+}
+
 function getConfig_() {
   var rows = readTab_(TAB_CONFIG);
   var cfg = {};
@@ -478,6 +499,7 @@ function setupSheet() {
   ensureTab_(ss, TAB_RESPONSES, RESPONSE_HEADERS);
   ensureTab_(ss, TAB_SPINS, SPIN_HEADERS);
   ensureTab_(ss, TAB_PRIZES, PRIZE_HEADERS);
+  var affiliates = ensureTab_(ss, TAB_AFFILIATES, AFFILIATE_HEADERS);
   var config = ensureTab_(ss, TAB_CONFIG, CONFIG_HEADERS);
 
   if (config.getLastRow() < 2) config.getRange(2, 1, CONFIG_DEFAULTS.length, 2).setValues(CONFIG_DEFAULTS);
@@ -492,6 +514,10 @@ function setupSheet() {
   var protection = prizes.protect().setDescription('Prize codes — real money. Owner only.');
   protection.removeEditors(protection.getEditors());
   protection.setWarningOnly(false);
+
+  var affProtection = affiliates.protect().setDescription('Affiliate codes — admin only.');
+  affProtection.removeEditors(affProtection.getEditors());
+  affProtection.setWarningOnly(false);
 
   Logger.log('Setup complete. Now paste your real pin codes into Prizes and run setupSecrets().');
 }

@@ -16,6 +16,10 @@ var spinToken = null;          // single-use spin token, from submitSurvey
 var timerHandle = null;
 var startedAtLocal = null;
 
+// Affiliate link: https://.../?ref=partnername — validated and attributed
+// server-side, this is just carried along with the sign-in request.
+var affiliateRef = new URLSearchParams(location.search).get('ref') || '';
+
 // ---------------------------------------------------------------- utilities
 
 function $(id) { return document.getElementById(id); }
@@ -144,7 +148,7 @@ async function onGoogleCredential(response) {
   hideError('landing-error');
   showOverlay(true);
   try {
-    var res = await callBackend('startSurvey', { id_token: response.credential });
+    var res = await callBackend('startSurvey', { id_token: response.credential, ref: affiliateRef });
     if (!res.ok) {
       if (res.error === 'ALREADY_SUBMITTED') {
         showAlreadyDone(res);
