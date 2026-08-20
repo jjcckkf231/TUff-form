@@ -40,6 +40,9 @@ var CONFIG_DEFAULTS = [
   ['campaign_open', 'TRUE']
 ];
 
+// student.chula.ac.th added alongside kmitl.ac.th for testing.
+var ALLOWED_HOSTED_DOMAINS = ['kmitl.ac.th', 'student.chula.ac.th'];
+
 var QUESTION_IDS = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7', 'q8'];
 var CHOICE_QUESTION_IDS = QUESTION_IDS; // all 8 are single_choice
 var SESSION_TTL_SEC = 60 * 60;          // survey session valid 1 hour
@@ -317,7 +320,7 @@ function verifyIdToken_(idToken) {
   }
   if (Number(c.exp) * 1000 < Date.now()) return { ok: false, error: 'TOKEN_EXPIRED' };
   if (String(c.email_verified) !== 'true') return { ok: false, error: 'EMAIL_NOT_VERIFIED' };
-  if (c.hd !== 'kmitl.ac.th') return { ok: false, error: 'NOT_KMITL' };
+  if (ALLOWED_HOSTED_DOMAINS.indexOf(c.hd) === -1) return { ok: false, error: 'NOT_ALLOWED_DOMAIN' };
   if (!c.sub) return { ok: false, error: 'INVALID_TOKEN' };
 
   return { ok: true, sub: c.sub, email: c.email };

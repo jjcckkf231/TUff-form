@@ -38,7 +38,7 @@ function hideError(elId) { $(elId).hidden = true; }
 
 function friendlyError(code) {
   var map = {
-    NOT_KMITL: 'ต้องเข้าสู่ระบบด้วยบัญชี @kmitl.ac.th เท่านั้น',
+    NOT_ALLOWED_DOMAIN: 'ต้องเข้าสู่ระบบด้วยบัญชี @kmitl.ac.th หรือ @student.chula.ac.th เท่านั้น',
     EMAIL_NOT_VERIFIED: 'บัญชีนี้ยังไม่ได้ยืนยันอีเมล',
     WRONG_AUDIENCE: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่',
     TOKEN_EXPIRED: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
@@ -125,7 +125,8 @@ function initGoogleSignIn() {
   }
   google.accounts.id.initialize({
     client_id: CFG.GOOGLE_CLIENT_ID,
-    hd: CFG.HOSTED_DOMAIN,
+    // No hd hint: the backend enforces the allowed-domain list (kmitl.ac.th,
+    // student.chula.ac.th for testing), so the account picker stays open to all.
     callback: onGoogleCredential
   });
   google.accounts.id.renderButton($('signin-slot'), {
