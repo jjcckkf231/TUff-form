@@ -384,31 +384,58 @@ function drawWheel() {
 }
 
 var currentRotation = 0;
+var preSpinTimer = null;
+
+// Spins the wheel continuously at a fixed rate so the click feels instant,
+// while the real result is still in flight (spin involves a server-side
+// lock + sheet read/write and can take a couple of seconds).
+function startPreSpin() {
+  var canvas = $('wheel');
+  canvas.style.transitionDuration = '0.45s';
+  canvas.style.transitionTimingFunction = 'linear';
+  function tick() {
+    currentRotation += 170;
+    canvas.style.transform = 'rotate(' + currentRotation + 'deg)';
+  }
+  tick();
+  preSpinTimer = setInterval(tick, 450);
+}
+
+function stopPreSpin() {
+  if (preSpinTimer) { clearInterval(preSpinTimer); preSpinTimer = null; }
+}
 
 async function onSpin() {
   var btn = $('spin-btn');
   btn.disabled = true;
+  btn.textContent = 'กำลังหมุน...';
   hideError('spin-error');
+  startPreSpin();
 
   var res;
   try {
     res = await callBackend('spin', { spin_token: spinToken });
   } catch (e) {
+    stopPreSpin();
     showError('spin-error', 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่');
     btn.disabled = false;
+    btn.textContent = 'หมุน!';
     return;
   }
 
   if (!res.ok) {
+    stopPreSpin();
     showError('spin-error', friendlyError(res.error));
     if (res.error === 'ALREADY_SPUN') {
       setTimeout(function () { showScreen('screen-result'); showResult({ result: null }); }, 800);
     } else {
       btn.disabled = false;
+      btn.textContent = 'หมุน!';
     }
     return;
   }
 
+  stopPreSpin();
   animateWheelTo(res.result === 'WIN', function () {
     showResult(res);
   });
@@ -428,9 +455,17 @@ function animateWheelTo(isWin, done) {
   var targetCenter = targetIndex * arc;
   var jitter = (Math.random() - 0.5) * arc * 0.6;
   var extraSpins = 5 * 360;
-  var finalRotation = currentRotation + extraSpins + (360 - targetCenter) + jitter;
+
+  // Continue smoothly from wherever the pre-spin loop left the wheel,
+  // rather than restarting from a fixed baseline.
+  var currentMod = ((currentRotation % 360) + 360) % 360;
+  var targetMod = (((360 - targetCenter) + jitter) % 360 + 360) % 360;
+  var deltaToTarget = ((targetMod - currentMod) % 360 + 360) % 360;
+  var finalRotation = currentRotation + extraSpins + deltaToTarget;
 
   currentRotation = finalRotation;
+  canvas.style.transitionDuration = '3s';
+  canvas.style.transitionTimingFunction = 'cubic-bezier(.15,.85,.25,1)';
   canvas.style.transform = 'rotate(' + finalRotation + 'deg)';
 
   setTimeout(done, 3100);
